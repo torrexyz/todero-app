@@ -72,33 +72,28 @@ const getLocalTimeRanges = () => {
 
 /*..........*/
 
-const isToday = (isoString) => {
+const isToday = (isoString, ranges) => {
   const taskTimestamp = getLocalTimestamp(isoString);
-  const ranges = getLocalTimeRanges();
   return taskTimestamp >= ranges.now && taskTimestamp <= ranges.today;
 };
 
-const isTomorrow = (isoString) => {
+const isTomorrow = (isoString, ranges) => {
   const taskTimestamp = getLocalTimestamp(isoString);
-  const ranges = getLocalTimeRanges();
   return taskTimestamp > ranges.today && taskTimestamp <= ranges.tomorrow;
 };
 
-const isThisWeek = (isoString) => {
+const isThisWeek = (isoString, ranges) => {
   const taskTimestamp = getLocalTimestamp(isoString);
-  const ranges = getLocalTimeRanges();
   return taskTimestamp >= ranges.now && taskTimestamp <= ranges.week;
 };
 
-const isThisMonth = (isoString) => {
+const isThisMonth = (isoString, ranges) => {
   const taskTimestamp = getLocalTimestamp(isoString);
-  const ranges = getLocalTimeRanges();
   return taskTimestamp >= ranges.now && taskTimestamp <= ranges.month;
 };
 
-const isExpired = (isoString) => {
+const isExpired = (isoString, ranges) => {
   const taskTimestamp = getLocalTimestamp(isoString);
-  const ranges = getLocalTimeRanges();
   return taskTimestamp > 0 && taskTimestamp < ranges.now;
 };
 
@@ -112,10 +107,9 @@ const DEFAULT_FILTERS = {
       </>
     ),
     call: (tasksData) => {
-      return Object.fromEntries(
-        Object.entries(tasksData).filter(
-          ([, value]) => isToday(value.expires_at) && !value.is_checked,
-        ),
+      const ranges = getLocalTimeRanges();
+      return tasksData.filter(
+        ([, value]) => isToday(value.expires_at, ranges) && !value.is_checked,
       );
     },
   },
@@ -126,10 +120,10 @@ const DEFAULT_FILTERS = {
       </>
     ),
     call: (tasksData) => {
-      return Object.fromEntries(
-        Object.entries(tasksData).filter(
-          ([, value]) => isTomorrow(value.expires_at) && !value.is_checked,
-        ),
+      const ranges = getLocalTimeRanges();
+      return tasksData.filter(
+        ([, value]) =>
+          isTomorrow(value.expires_at, ranges) && !value.is_checked,
       );
     },
   },
@@ -140,10 +134,10 @@ const DEFAULT_FILTERS = {
       </>
     ),
     call: (tasksData) => {
-      return Object.fromEntries(
-        Object.entries(tasksData).filter(
-          ([, value]) => isThisWeek(value.expires_at) && !value.is_checked,
-        ),
+      const ranges = getLocalTimeRanges();
+      return tasksData.filter(
+        ([, value]) =>
+          isThisWeek(value.expires_at, ranges) && !value.is_checked,
       );
     },
   },
@@ -154,10 +148,10 @@ const DEFAULT_FILTERS = {
       </>
     ),
     call: (tasksData) => {
-      return Object.fromEntries(
-        Object.entries(tasksData).filter(
-          ([, value]) => isThisMonth(value.expires_at) && !value.is_checked,
-        ),
+      const ranges = getLocalTimeRanges();
+      return tasksData.filter(
+        ([, value]) =>
+          isThisMonth(value.expires_at, ranges) && !value.is_checked,
       );
     },
   },
@@ -168,11 +162,7 @@ const DEFAULT_FILTERS = {
       </>
     ),
     call: (tasksData) => {
-      return Object.fromEntries(
-        Object.entries(tasksData).filter(
-          ([, value]) => value.expires_at === null,
-        ),
-      );
+      return tasksData.filter(([, value]) => value.expires_at === null);
     },
   },
   all: {
@@ -192,9 +182,7 @@ const DEFAULT_FILTERS = {
       </>
     ),
     call: (tasksData) => {
-      return Object.fromEntries(
-        Object.entries(tasksData).filter(([, value]) => value.is_checked),
-      );
+      return tasksData.filter(([, value]) => value.is_checked);
     },
   },
   expired: {
@@ -204,10 +192,9 @@ const DEFAULT_FILTERS = {
       </>
     ),
     call: (tasksData) => {
-      return Object.fromEntries(
-        Object.entries(tasksData).filter(
-          ([, value]) => isExpired(value.expires_at) && !value.is_checked,
-        ),
+      const ranges = getLocalTimeRanges();
+      return tasksData.filter(
+        ([, value]) => isExpired(value.expires_at, ranges) && !value.is_checked,
       );
     },
   },

@@ -1,5 +1,7 @@
 /* eslint-disable no-useless-catch */
 export default function commandHandler({
+  navigate,
+
   createProject,
   deleteProject,
 
@@ -10,17 +12,25 @@ export default function commandHandler({
   createKbcolumn,
   deleteKbcolumn,
 }) {
-  const searchParams = new URLSearchParams(location.search);
-  const projectParam = searchParams.get("project");
-  const filterParam = searchParams.get("filter");
+  return async (reference, args, options) => {
+    
+    const searchParams = new URLSearchParams(location.search);
+    const projectParam = searchParams.get("project");
+    const filterParam = searchParams.get("filter");
 
-  return async (reference, args) => {
     switch (reference) {
       //..........//
 
       case "create-project": {
         try {
           const query = await createProject(args);
+
+          if (query.success)
+            navigate({
+              pathname: location.pathname,
+              search: `?project=${query.data.public_id}`,
+            });
+
           return query.success ? query.data : null;
         } catch (err) {
           throw err;
@@ -31,7 +41,13 @@ export default function commandHandler({
         if (!projectParam) return;
 
         try {
-          const query = await deleteProject(projectParam);
+          const query = await deleteProject(projectParam, 250);
+
+          navigate(
+            { pathname: location.pathname, search: "?filter=today" },
+            { replace: true },
+          );
+
           return query.success ? query.data : null;
         } catch (err) {
           throw err;
@@ -91,7 +107,16 @@ export default function commandHandler({
 
       case "delete-task": {
         try {
-          const query = await deleteTask(args);
+          const query = await deleteTask(args, 500);
+
+          if (searchParams.get("task") === args) {
+            searchParams.delete("task");
+            navigate({
+              pathname: location.pathname,
+              search: searchParams.toString(),
+            });
+          }
+
           return query.success ? query.data : null;
         } catch (err) {
           throw err;
@@ -121,6 +146,7 @@ export default function commandHandler({
             taskId,
             column.substr(1),
             typeCastingValue,
+            options,
           );
 
           return query.success ? query.data : null;
@@ -133,7 +159,7 @@ export default function commandHandler({
 
       case "create-kbcolumn": {
         try {
-          const query = await createKbcolumn(args);
+          const query = await createKbcolumn(projectParam, args);
           return query.success ? query.data : null;
         } catch (err) {
           throw err;
@@ -150,9 +176,6 @@ export default function commandHandler({
       }
 
       //..........//
-
-      case "help":
-        return args;
 
       default:
         return null;

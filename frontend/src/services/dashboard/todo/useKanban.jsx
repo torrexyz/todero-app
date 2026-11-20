@@ -16,6 +16,11 @@ const todoKanbanAPI = {
     return response.data;
   },
 
+  createKbcolumn: async (data) => {
+    const query = await axios.post(`${API_BASE_URL}/create-kbcolumn`, data);
+    return query.data;
+  },
+
   //..........//
 };
 

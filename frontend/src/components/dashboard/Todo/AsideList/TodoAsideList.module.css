@@ -21,6 +21,14 @@ ul.asideList {
     display: flex;
     margin: 10px;
     width: 100%;
+
+    & > a {
+      align-items: center;
+      color: inherit;
+      display: flex;
+      text-decoration: none;
+      width: 100%;
+    }
   }
 
   & > hr {

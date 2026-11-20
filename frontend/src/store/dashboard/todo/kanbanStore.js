@@ -1,5 +1,10 @@
 import { create } from "zustand";
 
+import todoKanbanAPI from "@services/dashboard/todo/useKanban";
+
+import { normalizeById } from "@utils/normalizeById";
+import { consolInfo, consolWarn, consolError } from "@utils/consol";
+
 //====================//
 
 export const useKanbanStore = create((set, get) => ({
@@ -45,6 +50,67 @@ export const useKanbanStore = create((set, get) => ({
 
   //..........//
 
+  fetchKbcolumns: async (userId, projectId, force = false) => {
+    const kanbanStore = get();
+
+    if (!force && kanbanStore.loaded) {
+      consolWarn("#API:KANBAN (FETCH)", "(CACHE) Data already loaded");
+      return;
+    }
+
+    if (kanbanStore.isFetching) {
+      consolWarn("#API:KANBAN (FETCH)", "(ABORT) Previous fetch not finished");
+      return;
+    }
+
+    kanbanStore.setError(null);
+    kanbanStore.setIsFetching(true);
+    consolInfo("#API:KANBAN (FETCH)", "(PROCESS) Fetching data..");
+
+    try {
+      const execute = await todoKanbanAPI.fetchKbcolumns({
+        userId,
+        projectId,
+      });
+
+      get().setKbcolumns(normalizeById(execute.data));
+
+      consolInfo("#API:KANBAN (FETCH)", "(SUCCESS) Data fetched");
+      return execute;
+    } catch (err) {
+      consolError("#API:KANBAN (FETCH)", err.message);
+      get().setError(err.message);
+      throw err;
+    } finally {
+      get().setIsFetching(false);
+    }
+  },
+
+  createKbcolumn: async (userId, projectId, kbname) => {
+    get().setIsLoading(true);
+    consolInfo("#API:KANBAN (CREATE)", "(PROCESS) Creating kbcolumn..");
+
+    try {
+      const execute = await todoKanbanAPI.createKbcolumn({
+        userId,
+        projectId,
+        kbname,
+      });
+
+      get().addKbcolumn(execute.data.public_id, execute.data);
+
+      consolInfo("#API:KANBAN (CREATE)", "(SUCCESS) Kbcolumn created");
+      return execute;
+    } catch (err) {
+      consolError("#API:KANBAN (CREATE)", err.message);
+      throw err;
+    } finally {
+      get().setIsLoading(false);
+    }
+  },
+
+  //..........//
+
   clearAll: () =>
     set({
       kbcolumns: {},
@@ -53,8 +119,6 @@ export const useKanbanStore = create((set, get) => ({
       isLoading: false,
       isFetching: false,
     }),
-
-  getState: () => get(),
 
   //..........//
 }));

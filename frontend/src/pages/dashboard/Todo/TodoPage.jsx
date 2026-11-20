@@ -1,11 +1,14 @@
-import { isValidElement, useRef, useMemo } from "react";
-import { useLocation, Navigate, useSearchParams } from "react-router";
+import { isValidElement, useMemo } from "react";
+import { useLocation, useNavigate, Navigate, useSearchParams } from "react-router";
 
 import TodoAsideList from "@components/dashboard/Todo/AsideList/TodoAsideList";
 import TodoInputLine from "@components/dashboard/Todo/InputLine/TodoInputLine";
 import TodoTaskList from "@components/dashboard/Todo/TaskList/TodoTaskList";
 import TodoKanbanView from "@components/dashboard/Todo/KanbanView/TodoKanbanView";
 import TodoTaskBoard from "@components/dashboard/Todo/TaskBoard/TodoTaskBoard";
+
+import { useTaskStore } from "@store/dashboard/todo/taskStore";
+import { useProjectStore } from "@store/dashboard/todo/projectStore";
 
 import { useTodoTask } from "@hooks/dashboard/todo/useTask";
 import { useTodoProject } from "@hooks/dashboard/todo/useProject";
@@ -22,6 +25,7 @@ export default function TodoPage() {
   //..........//
 
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const filterParam = searchParams.get("filter");
@@ -30,25 +34,27 @@ export default function TodoPage() {
 
   //..........//
 
-  const { projectsData, createProject, deleteProject, updateProject } =
-    useTodoProject({ autoFetch: true });
+  const currentProject = useProjectStore((state) => state.projects[projectParam]);
+  const projectsLoaded = useProjectStore((state) => state.loaded);
 
-  const { tasksData, createTask, deleteTask, updateTask } = useTodoTask({
-    autoFetch: true,
-  });
+  const currentTask = useTaskStore((state) => state.tasks[taskParam]);
+  const tasksLoaded = useTaskStore((state) => state.loaded);
 
-  const { createKbcolumn, deleteKbcolumn, updateKbcolumn } = useTodoKanban({
-    autoFetch: true,
-  });
+  //..........//
+
+  const { createProject, deleteProject } = useTodoProject({ autoFetch: true });
+  const { createTask, deleteTask, updateTask } = useTodoTask({ autoFetch: true });
+  const { createKbcolumn, deleteKbcolumn } = useTodoKanban();
 
   //..........//
 
   const handleCommand = useMemo(
     () =>
       commandHandler({
+        navigate,
+
         createProject,
         deleteProject,
-        updateProject,
 
         createTask,
         deleteTask,
@@ -56,12 +62,12 @@ export default function TodoPage() {
 
         createKbcolumn,
         deleteKbcolumn,
-        updateKbcolumn,
       }),
     [
+      navigate,
+
       createProject,
       deleteProject,
-      updateProject,
 
       createTask,
       deleteTask,
@@ -69,44 +75,41 @@ export default function TodoPage() {
 
       createKbcolumn,
       deleteKbcolumn,
-      updateKbcolumn,
     ],
   );
 
+  const isPendingData = taskParam
+    ? !tasksLoaded
+    : projectParam
+      ? !projectsLoaded
+      : false;
+
   const currentFilter =
     DEFAULT_FILTERS[filterParam]?.element ||
-    projectsData[projectParam]?.pname ||
-    "(?) desconocido";
-
-  const inputLineRef = useRef(null);
+    currentProject?.pname ||
+    (isPendingData ? "..." : "(?) desconocido");
 
   //..........//
 
   if (
-    !taskParam
-      ? projectsData[projectParam] || isValidElement(currentFilter)
-      : tasksData[taskParam]
+    isPendingData ||
+    (!taskParam ? currentProject || isValidElement(currentFilter) : currentTask)
   ) {
     return (
       <>
-        <TodoAsideList defaultFilters={DEFAULT_FILTERS} />
+        <TodoAsideList />
 
         <div className={styles.todoPage}>
           <h1 className={styles.title}>{currentFilter}</h1>
 
-          <TodoInputLine
-            onCommand={handleCommand}
-            inputLineRef={inputLineRef}
-          />
+          <TodoInputLine onCommand={handleCommand} />
 
-          <TodoTaskList
-            defaultFilters={DEFAULT_FILTERS}
-            inputLineRef={inputLineRef}
-          />
+          <TodoTaskList onCommand={handleCommand} />
           <TodoKanbanView />
 
           <TodoTaskBoard
-            currentTask={tasksData[taskParam]}
+            taskId={taskParam}
+            currentTask={currentTask}
             onCommand={handleCommand}
           />
         </div>

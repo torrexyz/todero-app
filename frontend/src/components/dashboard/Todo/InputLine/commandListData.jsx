@@ -1,7 +1,5 @@
 import { consolInfo } from "@utils/consol";
 
-import styles from "./TodoInputLine.module.css";
-
 //====================//
 
 const COMMAND_LIST_DATA = {
@@ -88,7 +86,7 @@ const COMMAND_LIST_DATA = {
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sub-Lista
         de metas
         <br />
-        <u>@descriptor</u>&nbsp;&nbsp;&nbsp;Descripción
+        <u>@descriptor</u>&nbsp;&nbsp;&nbsp;&nbsp;Descripción
       </>
     ),
     usage: "/set-task [id] @[parametro] [valor]",
@@ -112,46 +110,6 @@ const COMMAND_LIST_DATA = {
     args: false,
     description: "Muestra todos los comandos disponibles",
     usage: "/help",
-    auxcall: ({
-      handleInputChange,
-      setHelpInfoElement,
-      commandList,
-      inputLineRef,
-    }) => {
-      setHelpInfoElement(
-        <>
-          <div
-            className={styles.helpInfoPopup}
-            onClick={() => setHelpInfoElement(null)}
-          >
-            <div className={styles.matchesBox} style={{ position: "unset" }}>
-              {Object.entries(commandList).map(
-                ([command, data]) =>
-                  command !== "help" && (
-                    <div
-                      key={command}
-                      className={styles.matchItem}
-                      onClick={() => {
-                        inputLineRef.current.value = `/${command} `;
-                        inputLineRef.current.focus();
-                        handleInputChange();
-                      }}
-                    >
-                      <div>
-                        <span className={styles.command}>{command}</span>
-                        <span className={styles.usage}>{data.usage}</span>
-                      </div>
-                      <div className={styles.description}>
-                        {data.description}
-                      </div>
-                    </div>
-                  ),
-              )}
-            </div>
-          </div>
-        </>,
-      );
-    },
   },
 
   //..........//

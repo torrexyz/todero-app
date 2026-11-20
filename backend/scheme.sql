@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     is_checked BOOLEAN NOT NULL DEFAULT false,
     descriptor VARCHAR(500) NULL,
     sublist JSON,
+    position INT NULL,
 );
 
 CREATE INDEX idx_projects_user_id ON projects(user_id);

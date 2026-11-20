@@ -1,13 +1,14 @@
-import { useRef, useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
+
+import { useDebouncedSave } from "./useDebouncedSave";
 
 //====================//
 
-export default function useHandleActions({ onCommand }) {
+export default function useHandleActions({ taskId, onCommand }) {
   //..........//
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const taskParam = searchParams.get("task");
+  const [, setSearchParams] = useSearchParams();
 
   const [titleIsUpdating, setTitleIsUpdating] = useState(false);
   const [expiresIsUpdating, setExpiresIsUpdating] = useState(false);
@@ -15,20 +16,58 @@ export default function useHandleActions({ onCommand }) {
   const [sublistIsUpdating, setSublistIsUpdating] = useState(0);
   const [descriptionBeUpdating, setDescriptionBeUpdating] = useState(0);
 
-  const expiresDelayRef = useRef(null);
-  const descriptorDelayRef = useRef(null);
-  const sublistDelayRef = useRef(null);
+  //..........//
+
+  const descriptorSave = useDebouncedSave(
+    async (newDescription, restoreDescription) => {
+      setDescriptionBeUpdating(1);
+
+      try {
+        await onCommand(
+          "set-task",
+          `${taskId} @descriptor ${newDescription || "null"}`,
+        );
+        setDescriptionBeUpdating(0);
+      } catch {
+        setDescriptionBeUpdating(2);
+        restoreDescription?.();
+      }
+    },
+    2500,
+  );
+
+  const sublistSave = useDebouncedSave(
+    async (newSublistData, restoreSublist) => {
+      setSublistIsUpdating(1);
+
+      try {
+        await onCommand(
+          "set-task",
+          `${taskId} @sublist ${JSON.stringify(newSublistData)}`,
+        );
+        setSublistIsUpdating(0);
+      } catch {
+        setSublistIsUpdating(2);
+        restoreSublist?.();
+      }
+    },
+    2500,
+  );
 
   //..........//
 
   const handleCloseClick = () => {
-    searchParams.delete("task");
-    setSearchParams(searchParams);
+    setSearchParams((prevParams) => {
+      prevParams.delete("task");
+      return prevParams;
+    });
   };
 
   const handleDeleteClick = () => {
     if (confirm("¿Deseas eliminar esta tarea?")) {
-      onCommand("delete-task", `${taskParam}`);
+      descriptorSave.cancel();
+      sublistSave.cancel();
+      onCommand("delete-task", `${taskId}`);
     }
   };
 
@@ -38,7 +77,7 @@ export default function useHandleActions({ onCommand }) {
     setTitleIsUpdating(true);
 
     try {
-      await onCommand("set-task", `${taskParam} @title ${newTitle}`);
+      await onCommand("set-task", `${taskId} @title ${newTitle}`);
     } catch {
       alert("¡Oops! Ocurrió un error al intentar actualizar el título.");
       restoreTitlte();
@@ -48,14 +87,12 @@ export default function useHandleActions({ onCommand }) {
   };
 
   const handleUpdateExpiresAt = async (date, restorePickerDate) => {
-    if (expiresDelayRef.current) clearTimeout(expiresDelayRef.current);
-
     setExpiresIsUpdating(true);
 
     try {
       await onCommand(
         "set-task",
-        `${taskParam} @expires_at ${date && date.toISOString()}`,
+        `${taskId} @expires_at ${date && date.toISOString()}`,
       );
     } catch {
       alert(
@@ -75,73 +112,24 @@ export default function useHandleActions({ onCommand }) {
     setProjectIsUpdating(true);
 
     try {
-      await onCommand("set-task", `${taskParam} @project_id ${projectId}`);
+      await onCommand("set-task", `${taskId} @project_id ${projectId}`);
     } catch {
       alert("¡Oops! Ocurrió un error al intentar actualizar la ubicación.");
-      restoreProject();
+      restoreProject?.();
     } finally {
       setProjectSelector(false);
       setProjectIsUpdating(false);
     }
   };
 
-  const handleUpdateDescription = async (
-    newDescription,
-    restoreDescription,
-  ) => {
-    if (descriptorDelayRef.current) clearTimeout(descriptorDelayRef.current);
-
+  const handleUpdateDescription = (newDescription, restoreDescription) => {
     setDescriptionBeUpdating(0);
-
-    await new Promise(
-      (resolve) => (descriptorDelayRef.current = setTimeout(resolve, 2500)),
-    );
-
-    setDescriptionBeUpdating(1);
-
-    try {
-      await onCommand(
-        "set-task",
-        `${taskParam} @descriptor ${newDescription || "null"}`,
-      );
-      setDescriptionBeUpdating(0);
-    } catch {
-      setDescriptionBeUpdating(2);
-      restoreDescription();
-    }
+    descriptorSave.schedule(newDescription, restoreDescription);
   };
 
-  const handleSublistUpdate = async (newSublistData, restoreSublist) => {
-    if (sublistDelayRef.current) clearTimeout(sublistDelayRef.current);
-
-    await new Promise((resolve) => {
-      sublistDelayRef.current = setTimeout(resolve, 2500);
-    });
-
-    setSublistIsUpdating(1);
-
-    try {
-      await onCommand(
-        "set-task",
-        `${taskParam} @sublist ${JSON.stringify(newSublistData)}`,
-      );
-      setSublistIsUpdating(0);
-    } catch {
-      setSublistIsUpdating(2);
-      restoreSublist();
-    }
+  const handleSublistUpdate = (newSublistData, restoreSublist) => {
+    sublistSave.schedule(newSublistData, restoreSublist);
   };
-
-  //..........//
-
-  useEffect(() => {
-    return () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      if (expiresDelayRef.current) clearTimeout(expiresDelayRef.current);
-      if (descriptorDelayRef.current) clearTimeout(descriptorDelayRef.current);
-      if (sublistDelayRef.current) clearTimeout(sublistDelayRef.current);
-    };
-  }, [taskParam]);
 
   //..........//
 

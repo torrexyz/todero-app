@@ -1,20 +1,22 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 
 import { LuLoader } from "react-icons/lu";
 
 import COMMAND_LIST_DATA from "./commandListData";
+import HelpPopup from "./HelpPopup";
 import styles from "./TodoInputLine.module.css";
 
 //====================//
 
-export default function TodoInputLine({ onCommand, inputLineRef }) {
+export default function TodoInputLine({ onCommand }) {
   //..........//
 
   const [matchesList, setMatchesList] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [helpInfoElement, setHelpInfoElement] = useState(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   const [executeIsLoading, setExecuteIsloading] = useState(false);
+  const inputLineRef = useRef(null);
   const matchesListRef = useRef(null);
 
   //..........//
@@ -27,21 +29,19 @@ export default function TodoInputLine({ onCommand, inputLineRef }) {
   const executeCommand = async (string, auxcalls) => {
     const parts = string.trim().split(" ");
     const name = parts[0].slice(1);
-    let args = parts.slice(1).join(" ");
+    const args = parts.slice(1).join(" ");
 
     if (COMMAND_LIST_DATA[name]) {
       emptySuggestList();
-      setExecuteIsloading(true);
-      inputLineRef.current.disabled = true;
 
       if (name === "help") {
-        args = {
-          handleInputChange,
-          setHelpInfoElement,
-          commandList: COMMAND_LIST_DATA,
-          inputLineRef,
-        };
+        inputLineRef.current.value = "";
+        setShowHelp(true);
+        return;
       }
+
+      setExecuteIsloading(true);
+      inputLineRef.current.disabled = true;
 
       try {
         const execute = await onCommand(name, args);
@@ -85,6 +85,12 @@ export default function TodoInputLine({ onCommand, inputLineRef }) {
 
     setMatchesList(suggestions);
     setSelectedIndex(-1);
+  };
+
+  const handleHelpPick = (command) => {
+    inputLineRef.current.value = `/${command} `;
+    inputLineRef.current.focus();
+    handleInputChange();
   };
 
   const handleKeyDown = (evnt) => {
@@ -151,16 +157,6 @@ export default function TodoInputLine({ onCommand, inputLineRef }) {
 
   //..........//
 
-  useEffect(() => {
-    if (inputLineRef.current) {
-      inputLineRef.current.executeCommand = (string, auxcalls) =>
-        executeCommand(string, auxcalls);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [executeCommand]);
-
-  //..........//
-
   return (
     <div className={styles.inputLine}>
       <input
@@ -197,11 +193,7 @@ export default function TodoInputLine({ onCommand, inputLineRef }) {
                 inputLineRef.current.value = `/${match.command} `;
                 handleInputChange();
               }}
-              onMouseEnter={(evnt) => {
-                const index = evnt.target.dataset.index;
-                if (index !== undefined) setSelectedIndex(Number(index));
-              }}
-              data-index={index}
+              onMouseEnter={() => setSelectedIndex(index)}
             >
               <div>
                 <span className={styles.command}>{match.command}</span>
@@ -221,7 +213,9 @@ export default function TodoInputLine({ onCommand, inputLineRef }) {
         </>
       )}
 
-      {helpInfoElement}
+      {showHelp && (
+        <HelpPopup onClose={() => setShowHelp(false)} onPick={handleHelpPick} />
+      )}
     </div>
   );
 }

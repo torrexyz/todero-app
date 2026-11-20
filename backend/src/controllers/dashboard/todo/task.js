@@ -149,6 +149,20 @@ class TodoTaskController {
     }
   };
 
+  positionCheck = async (res, value) => {
+    if (
+      value !== null ? (typeof value === "number" ? value < 0 : true) : false
+    ) {
+      res.status(400).json({
+        success: false,
+        error: "{position}:number|null is required",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
   //..........//
 
   async fetchTasks(req, res, next) {
@@ -238,6 +252,9 @@ class TodoTaskController {
         } else if (column === "sublist") {
           const sublistCheck = this.sublistCheck(res, value);
           if (!sublistCheck) return sublistCheck;
+        } else if (column === "position") {
+          const positionCheck = this.positionCheck(res, value);
+          if (!positionCheck) return positionCheck;
         } else {
           return res.status(400).json({
             success: false,

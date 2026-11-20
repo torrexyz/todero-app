@@ -1,67 +1,62 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState } from "react";
 
 //====================//
 
-export function useSublistData(currentTask, isSaving = false) {
+const parseSublist = (sublist) => {
+  if (!sublist) return [];
+
+  const parsed = typeof sublist === "string" ? JSON.parse(sublist) : sublist;
+
+  return parsed.map((item) => ({
+    id: item.id || crypto.randomUUID(),
+    isChecked: item.isChecked || false,
+    subtitle: item.subtitle || "",
+  }));
+};
+
+//====================//
+
+export function useSublistData(currentTask) {
   //..........//
 
-  const [sublistData, setSublistData] = useState([]);
-  const isInitialMount = useRef(true);
+  const [sublistData, setSublistData] = useState(() =>
+    parseSublist(currentTask?.sublist),
+  );
 
   //..........//
 
-  const addItem = useCallback((subtitle) => {
-    if (!subtitle.trim()) return;
+  const addItem = (subtitle) => {
+    if (!subtitle.trim()) return sublistData;
 
-    setSublistData((prev) => [
-      ...prev,
+    const newSublist = [
+      ...sublistData,
       {
         id: crypto.randomUUID(),
         isChecked: false,
         subtitle: subtitle.trim(),
       },
-    ]);
-  }, []);
+    ];
+    setSublistData(newSublist);
+    return newSublist;
+  };
 
-  const removeItem = useCallback((itemId) => {
-    setSublistData((prev) => prev.filter((item) => item.id !== itemId));
-  }, []);
+  const removeItem = (itemId) => {
+    const newSublist = sublistData.filter((item) => item.id !== itemId);
+    setSublistData(newSublist);
+    return newSublist;
+  };
 
-  const updateItem = useCallback((itemId, updates) => {
-    setSublistData((prev) =>
-      prev.map((item) => (item.id === itemId ? { ...item, ...updates } : item)),
+  const updateItem = (itemId, updates) => {
+    const newSublist = sublistData.map((item) =>
+      item.id === itemId ? { ...item, ...updates } : item,
     );
-  }, []);
+    setSublistData(newSublist);
+    return newSublist;
+  };
 
-  const restoreItems = useCallback((items) => {
-    setSublistData(items);
-  }, []);
-
-  //..........//
-
-  useEffect(() => {
-    if (!isInitialMount.current && isSaving) return;
-    isInitialMount.current = false;
-
-    if (!currentTask?.sublist) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSublistData([]);
-      return;
-    }
-
-    const parsed =
-      typeof currentTask.sublist === "string"
-        ? JSON.parse(currentTask.sublist)
-        : currentTask.sublist;
-
-    const withIds = parsed.map((item) => ({
-      id: item.id || crypto.randomUUID(),
-      isChecked: item.isChecked || false,
-      subtitle: item.subtitle || "",
-    }));
-
-    setSublistData(withIds);
-  }, [currentTask?.sublist, isSaving]);
+  const restoreItems = () => {
+    setSublistData(parseSublist(currentTask?.sublist));
+  };
 
   //..........//
 
